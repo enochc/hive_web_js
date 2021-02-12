@@ -1,8 +1,8 @@
 
 const REQUEST_PEERS = "<p|"
 
-const HEADER = 0x14;
-const H_NAME = 0x67;
+const HEADER = 0x72;
+const H_NAME = 0x78;
 const PROPERTIES = 0x10;
 const PROPERTY = 0x11;
 const PEER_RESPONSE = 0x66;
