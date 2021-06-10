@@ -78,6 +78,7 @@ export class Hive {
   */
   processMessage(buffer){
     let utf8_bytes = new Uint8Array(buffer)
+    // let utf8_bytes = new Int8Array(buffer)
 
     let t = this;
     let the_rest;
@@ -97,36 +98,56 @@ export class Hive {
         }
         break;
       case H_NAME:
-        console.log("NAME!!!! "+utf8_bytes)
+        console.log("NAME!!!! "+utf8_bytes);
+        break;
 
       case PROPERTIES:
-        // console.log(":: properties: "+utf8_bytes);
-        the_rest = String.fromCharCode(... utf8_bytes.slice(1));
-        the_rest.split("\n").forEach(function(pair) {
-          if (pair !== ""){
-            let v = pair.split("=");
-            let name = v[0];
-            let value = v[1];
 
-            let li = document.createElement("li");
-            li.setAttribute("id", "p_"+name);
-            li.appendChild(document.createTextNode(name+" ==  "+value))
-            t.properties.appendChild(li);
-          }
+        console.log(":: properties: "+String.fromCharCode(... utf8_bytes.slice(1)));
+        let position = 1;
+        while (position < utf8_bytes.length) {
+          let name_length = parseInt(utf8_bytes[position]);
+          console.log("name_length: "+name_length);
+          position++
+          let name_bytes = utf8_bytes.slice(position, name_length+position);
+          position += name_length;
+          let name = String.fromCharCode(... name_bytes);
+          console.log("prop name: "+name);
 
-        });
+          let li = document.createElement("li");
+          li.setAttribute("id", "p_"+name);
+
+          let ptype = utf8_bytes[position];
+          position++;
+          let value = this.getValue(ptype, utf8_bytes.slice(position));
+          console.log("prop value: "+value);
+          li.appendChild(document.createTextNode(name+" ==  "+value[0]));
+          t.properties.appendChild(li);
+          position += value[1];
+        }
 
         break;
 
       case PROPERTY:
-        the_rest = String.fromCharCode(... utf8_bytes.slice(1));
-        let v = the_rest.split("=")
-        let name = v[0];
-        let val = v[1];
+        let pos = 1;
+        let name_length = parseInt(utf8_bytes[pos]);
+        console.log("name_length: "+name_length);
+        pos++
+        let name_bytes = utf8_bytes.slice(pos, name_length+pos);
+        pos += name_length;
+        let name = String.fromCharCode(... name_bytes);
+        console.log("prop name: "+name);
+
         let li = document.getElementById("p_"+name);
+
+        let ptype = utf8_bytes[pos];
+        pos++;
+        let value = this.getValue(ptype, utf8_bytes.slice(pos));
+        console.log("prop value: "+value);
         if (li != null) {
-          li.innerText = name+" == "+val;
+          li.innerText = name+" == "+value[0];
         }
+
         break;
 
       case PEER_RESPONSE:
@@ -155,6 +176,40 @@ export class Hive {
     }
 
 
+  }
+  getValue(type, bytes) {
+    switch (type) {
+      case 0x20:
+        // string
+        let name_length = parseInt(bytes[0])
+        console.log("name length: "+name_length);
+        let name_bytes = bytes.slice(1, 1+name_length);
+        let name_str = String.fromCharCode(... name_bytes);
+        return [name_str, 1+name_length];
+
+      case 0x19:
+        return [parseInt(bytes[0]) > 0, 1];
+      case 0x21:
+        //short
+        return [parseInt(bytes[0]), 1];
+      case 0x14:
+        //2 bytes
+        return [parseInt(bytes.slice(0,1), 2), 2];
+      case 0x15:
+        //4 bytes
+        return [parseInt(bytes.slice(0,3), 2), 4];
+      case 0x16:
+        //8 bytes
+        return [parseInt(bytes.slice(0,7), 2), 8];
+      case 0x17:
+        //8 bytes
+          // TODO fix this
+        return [parseFloat(bytes.slice(0,7)), 8];
+
+
+
+
+    }
   }
   onClose(event){
     console.log("closed");
